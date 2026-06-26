@@ -84,6 +84,7 @@ fresher (larger-expTime) message for the same root.
 ## Testing
 Verified end-to-end against the provided `topology.csv`: all nodes converge to `Root=7416` with the
 expected shortest-path distances; HELLO keep-alives fire every `HELLO_TIMEOUT`; and on a root crash the
-survivors re-elect the next-smallest ID (`15762`) within ~`ROOT_TIMEOUT`. Additional scenarios
-exercised: a topology with cycles, staggered/late joins, and a crashed root rejoining and reclaiming
-its role.
+survivors re-elect the next-smallest ID (`15762`) within ~`ROOT_TIMEOUT`. Additional scenarios pass
+against a reference oracle: a mesh with an equal-cost tie, a **disconnected** graph (each component
+elects its own root), a long chain, zero-cost links, cyclic graphs, staggered/late joins, and a
+crashed root rejoining and reclaiming its role.

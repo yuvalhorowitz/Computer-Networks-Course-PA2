@@ -686,6 +686,38 @@ states", and ensure the zip contains exactly the required files.
   restarted (a smaller root ID arriving wins immediately); all final states matched the original
   oracle.
 
+### Generic topology testing (reference oracle)
+Added `build/oracle.py` (computes the converged state — per-component root, Dijkstra distances,
+smallest-next-hop tie-break) and `build/run_topo.sh` (runs netproc + a node per ID and auto-compares
+observed vs oracle, OK/XX per row). Works on any `endpoint,endpoint,cost` CSV. All passed (every row
+OK):
+
+| topology | what it stresses | result |
+|---|---|---|
+| `topo_mesh` (root 5) | path depth + equal-cost tie at node 20 (→parent 8) | all OK |
+| `topo_split` | **disconnected** → two independent roots (100, 400) | all OK |
+| `topo_chain` (root 1) | deep 6-hop propagation | all OK |
+| `topo_zero` (root 10) | zero-cost links (all distance 0) | all OK |
+| `topo_loop` (root 10) | ring + chord cycles + tie | all OK |
+| `topo_star` (root 10) | star whose **root is a leaf** (hub relays) | all OK |
+| `topo_complete` (root 11) | complete K4; node 33 best via 22, not direct | all OK |
+| `topo_diamond` (root 1) | two equal shortest paths → tie at node 4 (→2) | all OK |
+| `topo_bigmesh` (root 3) | 10 nodes, non-obvious deep paths | all OK |
+
+The disconnected case confirms Root = smallest ID **in the connected component**, not globally.
+
+### Dynamic / timing scenarios (bespoke scripts) — all passed
+| script | scenario | result |
+|---|---|---|
+| `test_nonroot_fail.sh` | kill intermediate 25824; root unchanged, others reroute | ✅ 56908 85→231/53021 |
+| `test_late_join.sh` | 4 converge, then 56908 joins late | ✅ joins to full oracle |
+| `test_stability.sh` | post-convergence behavior | ✅ STABLE (last change `time=0.0`), ~1 HELLO/2 s/node, no send storms |
+| `test_robust.sh` | short lifetime (1 s) + unknown ID | ✅ both exit cleanly (exit 0); netproc rejects unknown ID |
+
+Note: a single *link* failure can't be tested (the provided netproc's topology is static — the only
+failure primitive is killing a whole node). On an unexpected netproc disconnect the node currently
+reuses the lifetime shutdown line — graceful, though the message is generic.
+
 ## 6.4 Remaining
 Fill `## Team` in the README with members' names + ID numbers, then `make clean` and zip the eight
 submission files. Everything else is submission-ready.

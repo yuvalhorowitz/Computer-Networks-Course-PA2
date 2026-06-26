@@ -136,6 +136,29 @@ Confirms expTime aging + recovery: survivors converge to the 15762 oracle (15762
 ! sh build/step6_rejoin.sh   # kill the root, recover to 15762, restart 7416 -> reclaims root
 ```
 
+### Generic topology tester (any graph) — auto-checks vs a reference oracle
+`build/oracle.py` computes the expected converged state (matching bfproc's tie-break);
+`build/run_topo.sh` launches netproc + one node per ID (costs auto-derived) and prints observed vs
+oracle with an OK/XX marker. Works on any topology CSV.
+```sh
+! sh build/run_topo.sh build/topo_mesh.csv     # 6-node mesh: depth + an equal-cost tie (node 20)
+! sh build/run_topo.sh build/topo_split.csv    # disconnected: two components -> two roots (100, 400)
+! sh build/run_topo.sh build/topo_chain.csv    # 6-node line: deep multi-hop propagation
+! sh build/run_topo.sh build/topo_zero.csv     # zero-cost links (all distance 0) + tie
+! sh build/run_topo.sh build/topo_loop.csv     # ring + chord (same as step6_loop)
+
+# Just print the expected oracle for a topology (no sockets):
+python3 build/oracle.py build/topo_mesh.csv
+```
+
+### Dynamic / timing scenarios
+```sh
+! sh build/test_nonroot_fail.sh   # kill intermediate 25824; survivors reroute (56908: 85->231)
+! sh build/test_late_join.sh      # 4 nodes converge, then 56908 joins late and slots in
+! sh build/test_stability.sh      # after convergence: no churn + ~1 HELLO/interval/node
+! sh build/test_robust.sh         # short lifetime (1s) + unknown-ID rejection handled gracefully
+```
+
 ## Package for submission
 
 The zip must contain ONLY these files (verified: a clean `make` builds `bfproc` from them):

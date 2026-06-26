@@ -13,3 +13,5 @@ build/probe
 build/test_msg
 build/*.log
 build/log_*.txt
+build/oracle_*.txt
+build/topo_no25824.csv
