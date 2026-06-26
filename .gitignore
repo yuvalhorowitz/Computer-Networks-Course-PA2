@@ -1,0 +1,15 @@
+# OS noise
+.DS_Store
+
+# Build artifacts (repo root)
+*.o
+/bfproc
+/pa2_submission.zip
+
+# Local test binaries & run logs under build/
+# (the source/scripts in build/ — *.c, *.sh, *.h, *.csv — are kept on purpose)
+build/netproc
+build/probe
+build/test_msg
+build/*.log
+build/log_*.txt

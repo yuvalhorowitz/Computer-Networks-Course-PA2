@@ -1,0 +1,57 @@
+Frequently Asked Questions
+In this section we post various implementation tips.
+
+Socket options: For this exercise, there are several flags the you may need to set using setsockopt() for the sockets connecting nodeproc to netproc. These are
+TCP_NODELAY
+MSG_WAITALL
+MSG_NOSIGNAL
+Consult the man pages for details and see netproc as an example.
+TCP is a byte stream; there are no message boundaries. Ensure that you use 128-byte fixed length messages.
+For timeouts, you may need to perform arithmetic on struct timeval. Consult timeval(3type) man page for useful functions.
+
+
+
+timeval(3type) — Linux manual page
+NAME | LIBRARY | SYNOPSIS | DESCRIPTION | STANDARDS | HISTORY | NOTES | SEE ALSO | COLOPHON
+
+
+ 
+timeval(3type)                                             timeval(3type)
+NAME         top
+       timeval - time in seconds and microseconds
+LIBRARY         top
+       Standard C library (libc)
+SYNOPSIS         top
+       #include <sys/time.h>
+
+       struct timeval {
+           time_t       tv_sec;   /* Seconds */
+           suseconds_t  tv_usec;  /* Microseconds */
+       };
+DESCRIPTION         top
+       Describes times in seconds and microseconds.
+STANDARDS         top
+       POSIX.1-2024.
+HISTORY         top
+       SUSv1, POSIX.1-2001.
+NOTES         top
+       The following headers also provide this type: <sys/resource.h>,
+       <sys/select.h>, and <utmpx.h>.
+SEE ALSO         top
+       gettimeofday(2), select(2), utimes(2), adjtime(3), futimes(3),
+       timeradd(3), suseconds_t(3type), time_t(3type), timespec(3type)
+COLOPHON         top
+       This page is part of the man-pages (Linux kernel and C library
+       user-space interface documentation) project.  Information about
+       the project can be found at 
+       ⟨https://www.kernel.org/doc/man-pages/⟩.  If you have a bug report
+       for this manual page, see
+       ⟨https://git.kernel.org/pub/scm/docs/man-pages/man-pages.git/tree/CONTRIBUTING⟩.
+       This page was obtained from the tarball man-pages-6.18.tar.gz
+       fetched from
+       ⟨https://mirrors.edge.kernel.org/pub/linux/docs/man-pages/⟩ on
+       2026-05-24.  If you discover any rendering problems in this HTML
+       version of the page, or you believe there is a better or more up-
+       to-date source for the page, or you have corrections or
+       improvements to the information in this COLOPHON (which is not
+       part of the original manual page), send a mail to

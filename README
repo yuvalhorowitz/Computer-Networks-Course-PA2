@@ -1,0 +1,89 @@
+# PA2 — Distributed Bellman-Ford (`bfproc`)
+
+> TAU "Introduction to Computer Networks" — Programming Assignment 2.
+
+## Team
+- Yuval Horowitz — 206587719
+- Yotam Gilboa — 313294266
+- Avraham Mazuz — 318436573
+
+## Overview
+`bfproc` is the node process for a distributed Bellman-Ford / spanning-tree-style protocol. Many
+instances run (one per node) and exchange fixed-size messages through the provided `netproc` network
+emulator. Each node converges on its **Root** (smallest ID in its connected component), its **parent**
+(next hop toward the Root), and its **distance** (cost of the shortest path to the Root).
+
+## Build
+```sh
+make            # produces ./bfproc
+make clean
+```
+
+## Run
+```sh
+bfproc <netproc_addr> <node_id> <lifetime_seconds> <cost1> [cost2 ...]
+# costs are this node's incident-link costs in topology-file (link-index) order.
+```
+`netproc` must already be listening on port 6789 (started with the same topology file).
+
+## Algorithm
+Distributed Bellman-Ford / spanning-tree election. Each node starts as its own root and advertises a
+BPDU `(myRoot, myCost, myID, expTime)` to all neighbors. On each received update it **relaxes**: over
+itself `(myID, 0)` and every neighbor link `j` `(nbrRoot, nbrCost + cost[j])`, it picks the best by
+**smaller root → smaller cost → smaller next-hop ID**, yielding its Root, distance, and parent. It
+re-advertises whenever its view (root or cost) changes, and at least once per `HELLO_TIMEOUT`
+(keep-alive). `expTime` ages root information so a crashed root is detected and the network re-elects
+the next-smallest ID (see _Multiple timeouts_).
+
+## Data structures
+- `bf_msg` (bf.h) — the advertised BPDU `(myRoot, myCost, myID, expTime)`.
+- `link_t` (bfproc.c) — per incident link, indexed by link number: the static `cost`, whether we have
+  `heard` on it, and the neighbor's last advertisement (`nbrID/nbrRoot/nbrCost`) with its absolute
+  `expDeadline` (when that root info ages out).
+- `node_t` (bfproc.c) — this node's current view: `myID/myRoot/myCost`, the `parentLink`/`parentID`
+  (root port; `-1`/NULL when self-root), and the link array.
+
+## Packet structure
+Every message is a fixed **128-byte** frame: `[ byte 0 = link ][ bytes 1..127 = payload ]`.
+- **byte 0** — on send, the destination link (0-based) or `0xFF` to broadcast; on receive, `netproc`
+  rewrites it to *our* ingress link number.
+- **payload** (`bf_msg`, network byte order, rest zero-padded): `myRoot` (0–3), `myCost` (4–7),
+  `myID` (8–11), `expTime` in ms (12–15).
+
+Serialization is done byte-by-byte with `htonl`/`ntohl` (`msg.c`), so it is independent of struct
+layout/endianness.
+
+## Multiple timeouts
+Single-threaded `select()` event loop with three absolute deadlines (computed from
+`clock_gettime(CLOCK_REALTIME)`), blocking until the nearest one:
+- **HELLO** (`HELLO_TIMEOUT`) — re-advertise as a keep-alive; reset on every send.
+- **root-expiry** (`expDeadline` of the parent link) — when the current root's info ages out; waking
+  here forces a re-relax that drops the dead parent and falls back toward self (root-crash recovery).
+- **lifetime** — terminate gracefully.
+
+`expTime` carries the remaining freshness of root info (ms); a self-root advertises `ROOT_TIMEOUT`, and
+each hop forwards the value adjusted for the time it was held. A stored deadline only increases on a
+fresher (larger-expTime) message for the same root.
+
+## Notes / anything unusual
+- **Executable name.** The assignment is inconsistent: §2 uses `nodeproc` illustratively in the
+  command-line description/examples, while §3 (submission) requires the `Makefile` to build the node
+  **under the name `bfproc`**. We follow §3 — the `Makefile` target is `bfproc`. The command-line
+  interface is exactly the one §2 specifies; only the program name differs.
+- **Event times** are printed as seconds **elapsed since process start** (`time=0.0` at startup). This
+  is reproducible across machines; the spec's `120.0`-style numbers are just scenario-relative.
+- **`expTime`** is carried in **milliseconds** (internally and on the wire); a self-root advertises
+  `ROOT_TIMEOUT` seconds' worth. It is never printed, so the unit is purely internal.
+- **Serialization** is byte-by-byte with `htonl`/`ntohl` (`msg.c`), independent of struct
+  padding/alignment or host endianness.
+- **Robustness:** `SIGPIPE` is ignored and sends use `MSG_NOSIGNAL` (reads use `MSG_WAITALL`), per the
+  FAQ, so a peer/`netproc` disconnect can never kill the node — important for the recovery scenarios.
+- **Build flag** `-std=gnu11` is used so the POSIX/BSD socket and `clock_gettime` prototypes are visible
+  on both Linux (grading target) and macOS without per-file feature-test macros.
+
+## Testing
+Verified end-to-end against the provided `topology.csv`: all nodes converge to `Root=7416` with the
+expected shortest-path distances; HELLO keep-alives fire every `HELLO_TIMEOUT`; and on a root crash the
+survivors re-elect the next-smallest ID (`15762`) within ~`ROOT_TIMEOUT`. Additional scenarios
+exercised: a topology with cycles, staggered/late joins, and a crashed root rejoining and reclaiming
+its role.
