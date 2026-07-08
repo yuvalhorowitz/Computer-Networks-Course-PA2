@@ -1,10 +1,17 @@
 # OS noise
 .DS_Store
+.claude/
 
 # Build artifacts (repo root)
 *.o
 /bfproc
+/nodeproc
+
+# Submission zips + any accidental Finder extractions of them
 /pa2_submission.zip
+/pa2_submission/
+PA2_*.zip
+/PA2_*/
 
 # Local test binaries & run logs under build/
 # (the source/scripts in build/ — *.c, *.sh, *.h, *.csv — are kept on purpose)
