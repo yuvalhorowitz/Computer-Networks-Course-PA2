@@ -12,7 +12,7 @@ LT="${2:-5}"
 [ -n "$TOPO" ] || { echo "usage: sh build/run_topo.sh <topology.csv> [lifetime]"; exit 2; }
 
 [ -x build/netproc ] || cc -std=c11 -Wall -pthread -Ibuild/shim -I"$SRC" -o build/netproc "$SRC/netproc.c"
-make -s bfproc
+make -s nodeproc
 
 nodes=$(awk -F, 'NF>=3{print $1"\n"$2}' "$TOPO" | sort -un)
 rm -f build/run_*.log build/log_topo.txt
@@ -23,7 +23,7 @@ sleep 0.5
 
 for id in $nodes; do
   costs=$(awk -F, -v t="$id" '$1==t || $2==t {print $3}' "$TOPO" | tr '\n' ' ')
-  ./bfproc 127.0.0.1 "$id" "$LT" $costs >"build/run_$id.log" 2>&1 &
+  ./nodeproc 127.0.0.1 "$id" "$LT" $costs >"build/run_$id.log" 2>&1 &
 done
 
 sleep $((LT + 1))

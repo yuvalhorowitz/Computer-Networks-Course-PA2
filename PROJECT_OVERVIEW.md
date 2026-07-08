@@ -32,7 +32,7 @@ physically connected but carry no data — ready as backup.
 ### 1.2 The graph model
 
 We treat the network as a weighted graph `G = (V, E)`:
-- `V` = nodes (each `bfproc` process, identified by an integer **ID**).
+- `V` = nodes (each `nodeproc` process, identified by an integer **ID**).
 - `E` = links; each link `(u, v)` has a non-negative integer **cost** `c(u, v)`.
 - A **path**'s cost is the sum of its link costs; the **distance** is the cheapest such cost.
 
@@ -124,7 +124,7 @@ Lecture 4 adds that a bridge **forgets old messages after a while** — informat
 
 | Lecture-4 / STP concept | PA2 realization |
 |---|---|
-| Bridge running STP | one `bfproc` process per node |
+| Bridge running STP | one `nodeproc` process per node |
 | Bridges talking over LAN segments | node processes exchanging 127-byte messages via `netproc` |
 | BPDU `(myRoot, myDist, myID)` | the update message payload (+ `expTime`) |
 | Default `(myID, 0, myID)` | initial state `myRoot=myID, myCost=0, parent=NULL` |
@@ -147,11 +147,11 @@ cooperatively discovers, with no central coordinator,
 3. its **distance** — the total cost of that shortest path.
 
 The network emulator, **`netproc`**, is *provided* by the course. We do **not** write it. We only
-write the node executable, which must be built under the name **`bfproc`**.
+write the node executable, which must be built under the name **`nodeproc`**.
 
 ### How the system runs
 1. `netproc` is started with a topology file and listens on TCP port **6789**.
-2. Each node is started as a separate `bfproc` process. It `connect()`s to `netproc` and sends its
+2. Each node is started as a separate `nodeproc` process. It `connect()`s to `netproc` and sends its
    ID as a 4-byte `htonl(int)`.
 3. Nodes never talk to each other directly — every message goes **through `netproc`**, which relays
    it to the correct neighbor over TCP.
@@ -170,14 +170,14 @@ to `Root = 7416`.
 
 ### Command line
 ```
-bfproc <netproc_address> <node_id> <lifetime> <cost1> [cost2 ...]
+nodeproc <netproc_address> <node_id> <lifetime> <cost1> [cost2 ...]
 ```
 - `netproc_address` — IP of the machine running `netproc` (`127.0.0.1` if local).
 - `node_id` — this node's integer ID.
 - `lifetime` — seconds to run before graceful shutdown.
 - `cost1, cost2, ...` — costs of the incident links, in port order. The provided `costs.sh` script
   extracts these from the topology file:
-  `bfproc 127.0.0.1 7416 60 $(./costs.sh topology.csv 7416)`
+  `nodeproc 127.0.0.1 7416 60 $(./costs.sh topology.csv 7416)`
 
 ---
 
@@ -279,8 +279,8 @@ deadlines have passed (send HELLO / expire root / shut down).
 |---|---|
 | `bf.h` | Provided constants, extended with the `bf_msg` struct and frame/protocol defines. |
 | `net_util.h` / `net_util.c` | Stevens `writen`/`readn`, connect-to-netproc + `TCP_NODELAY` helper. |
-| `bfproc.c` | argv parsing, connect, neighbor table, relaxation, expiry, `select()` event loop, output. |
-| `Makefile` | Builds the `bfproc` executable; `clean` target. |
+| `nodeproc.c` | argv parsing, connect, neighbor table, relaxation, expiry, `select()` event loop, output. |
+| `Makefile` | Builds the `nodeproc` executable; `clean` target. |
 | `README` | Team names + IDs, algorithm summary, packet structure, multi-timeout design. |
 
 ---
@@ -290,7 +290,7 @@ deadlines have passed (send HELLO / expire root / shut down).
 0. **Verify the wire protocol** — compile `netproc`, write a throwaway probe client, and confirm:
    is there a receiver link byte? what is the link index base (0 vs 1)? what frame length to read?
 1. **`bf.h` + `net_util`** — constants, message struct, `writen`/`readn`, connect helper.
-2. **`bfproc.c`** — full algorithm, timers, event loop, exact output formatting.
+2. **`nodeproc.c`** — full algorithm, timers, event loop, exact output formatting.
 3. **`Makefile` + `README`**.
 4. **End-to-end verification** (below).
 
@@ -311,7 +311,7 @@ Expected steady state for `topology.csv` (Root = 7416 everywhere):
 Test procedure:
 1. `make`; build `netproc` from the provided resources.
 2. Start `netproc topology.csv`.
-3. Start one `bfproc` per node using `costs.sh`.
+3. Start one `nodeproc` per node using `costs.sh`.
 4. Confirm convergence to the table above; confirm "Message sent" appears on changes and every ~2s.
 5. **Recovery test:** kill node `7416` mid-run; survivors should re-elect `15762` after
    `ROOT_TIMEOUT`.

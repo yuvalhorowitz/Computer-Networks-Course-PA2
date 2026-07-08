@@ -1,4 +1,4 @@
-# PA2 — Distributed Bellman-Ford (`nodeproc`)
+# PA2 — Distributed Bellman-Ford (`bfproc`)
 
 > TAU "Introduction to Computer Networks" — Programming Assignment 2.
 
@@ -8,20 +8,20 @@
 - Avraham Mazuz — 318436573
 
 ## Overview
-`nodeproc` is the node process for a distributed Bellman-Ford / spanning-tree-style protocol. Many
+`bfproc` is the node process for a distributed Bellman-Ford / spanning-tree-style protocol. Many
 instances run (one per node) and exchange fixed-size messages through the provided `netproc` network
 emulator. Each node converges on its **Root** (smallest ID in its connected component), its **parent**
 (next hop toward the Root), and its **distance** (cost of the shortest path to the Root).
 
 ## Build
 ```sh
-make            # produces ./nodeproc  (compiled from nodeproc.c + net_util.c + msg.c)
+make            # produces ./bfproc
 make clean
 ```
 
 ## Run
 ```sh
-nodeproc <netproc_addr> <node_id> <lifetime_seconds> <cost1> [cost2 ...]
+bfproc <netproc_addr> <node_id> <lifetime_seconds> <cost1> [cost2 ...]
 # costs are this node's incident-link costs in topology-file (link-index) order.
 ```
 `netproc` must already be listening on port 6789 (started with the same topology file).
@@ -36,11 +36,11 @@ re-advertises whenever its view (root or cost) changes, and at least once per `H
 the next-smallest ID (see _Multiple timeouts_).
 
 ## Data structures
-- `bf_msg` (msg.h) — the advertised BPDU `(myRoot, myCost, myID, expTime)`.
-- `link_t` (nodeproc.c) — per incident link, indexed by link number: the static `cost`, whether we have
+- `bf_msg` (bf.h) — the advertised BPDU `(myRoot, myCost, myID, expTime)`.
+- `link_t` (bfproc.c) — per incident link, indexed by link number: the static `cost`, whether we have
   `heard` on it, and the neighbor's last advertisement (`nbrID/nbrRoot/nbrCost`) with its absolute
   `expDeadline` (when that root info ages out).
-- `node_t` (nodeproc.c) — this node's current view: `myID/myRoot/myCost`, the `parentLink`/`parentID`
+- `node_t` (bfproc.c) — this node's current view: `myID/myRoot/myCost`, the `parentLink`/`parentID`
   (root port; `-1`/NULL when self-root), and the link array.
 
 ## Packet structure
@@ -66,14 +66,10 @@ each hop forwards the value adjusted for the time it was held. A stored deadline
 fresher (larger-expTime) message for the same root.
 
 ## Notes / anything unusual
-- **Executable name.** The PDF is inconsistent (§2 says `nodeproc`, §3 says `bfproc`); the course
-  forum clarified the executable must be **`nodeproc`**, so the `Makefile` builds `nodeproc` from
-  `nodeproc.c`. The command-line interface is exactly the one the PDF specifies; only the program
-  name is pinned.
-- **`bf.h` holds only the provided constants** (`PORT`, `HELLO_TIMEOUT`, `ROOT_TIMEOUT`) — per the
-  forum, it "should not include anything except the constant definitions" and may be replaced by the
-  graders' copy. Our framing macros and the `bf_msg` struct therefore live in `msg.h`, so the code
-  still compiles against a substituted `bf.h`.
+- **Executable name.** The assignment is inconsistent: §2 uses `nodeproc` illustratively in the
+  command-line description/examples, while §3 (submission) requires the `Makefile` to build the node
+  **under the name `bfproc`**. We follow §3 — the `Makefile` target is `bfproc`. The command-line
+  interface is exactly the one §2 specifies; only the program name differs.
 - **Event times** are printed as seconds **elapsed since process start** (`time=0.0` at startup). This
   is reproducible across machines; the spec's `120.0`-style numbers are just scenario-relative.
 - **`expTime`** is carried in **milliseconds** (internally and on the wire); a self-root advertises
@@ -88,7 +84,6 @@ fresher (larger-expTime) message for the same root.
 ## Testing
 Verified end-to-end against the provided `topology.csv`: all nodes converge to `Root=7416` with the
 expected shortest-path distances; HELLO keep-alives fire every `HELLO_TIMEOUT`; and on a root crash the
-survivors re-elect the next-smallest ID (`15762`) within ~`ROOT_TIMEOUT`. Additional scenarios pass
-against a reference oracle: a mesh with an equal-cost tie, a **disconnected** graph (each component
-elects its own root), a long chain, zero-cost links, cyclic graphs, staggered/late joins, and a
-crashed root rejoining and reclaiming its role.
+survivors re-elect the next-smallest ID (`15762`) within ~`ROOT_TIMEOUT`. Additional scenarios
+exercised: a topology with cycles, staggered/late joins, and a crashed root rejoining and reclaiming
+its role.

@@ -1,9 +1,9 @@
 /*
- * net_util.h — generic socket + timing helpers for nodeproc.
+ * net_util.h — generic socket + timing helpers for bfproc.
  *
  * Purpose: keep the reusable, protocol-agnostic plumbing (full-frame stream
  * I/O, connecting to netproc, the ID handshake, and an elapsed-time clock)
- * separate from the Bellman-Ford logic in nodeproc.c. Nothing here knows about
+ * separate from the Bellman-Ford logic in bfproc.c. Nothing here knows about
  * BPDUs — it just moves bytes and tracks time.
  *
  * Full per-function documentation lives at each definition in net_util.c.

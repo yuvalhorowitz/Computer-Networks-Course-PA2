@@ -9,7 +9,7 @@ SRC="source files/PA2_resource_alpha"
 TOPO="build/topo_loop.csv"
 
 [ -x build/netproc ] || cc -std=c11 -Wall -pthread -Ibuild/shim -I"$SRC" -o build/netproc "$SRC/netproc.c"
-make -s bfproc
+make -s nodeproc
 
 rm -f build/l_10.log build/l_20.log build/l_30.log build/l_40.log build/log_netproc6.txt
 build/netproc "$TOPO" >build/log_netproc6.txt 2>&1 &
@@ -18,10 +18,10 @@ trap 'kill $NP 2>/dev/null' EXIT
 sleep 0.5
 
 LT=5
-./bfproc 127.0.0.1 10 $LT 1 1   >build/l_10.log 2>&1 &   # links 0->20, 1->40
-./bfproc 127.0.0.1 20 $LT 1 1 1 >build/l_20.log 2>&1 &   # links 0->10, 1->30, 2->40
-./bfproc 127.0.0.1 30 $LT 1 1   >build/l_30.log 2>&1 &   # links 0->20, 1->40
-./bfproc 127.0.0.1 40 $LT 1 1 1 >build/l_40.log 2>&1 &   # links 0->30, 1->10, 2->20
+./nodeproc 127.0.0.1 10 $LT 1 1   >build/l_10.log 2>&1 &   # links 0->20, 1->40
+./nodeproc 127.0.0.1 20 $LT 1 1 1 >build/l_20.log 2>&1 &   # links 0->10, 1->30, 2->40
+./nodeproc 127.0.0.1 30 $LT 1 1   >build/l_30.log 2>&1 &   # links 0->20, 1->40
+./nodeproc 127.0.0.1 40 $LT 1 1 1 >build/l_40.log 2>&1 &   # links 0->30, 1->10, 2->20
 
 sleep $((LT + 1))
 kill $NP 2>/dev/null

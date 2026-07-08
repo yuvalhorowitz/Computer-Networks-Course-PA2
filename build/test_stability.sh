@@ -10,7 +10,7 @@ SRC="source files/PA2_resource_alpha"
 TOPO="$SRC/topology.csv"
 
 [ -x build/netproc ] || cc -std=c11 -Wall -pthread -Ibuild/shim -I"$SRC" -o build/netproc "$SRC/netproc.c"
-make -s bfproc
+make -s nodeproc
 
 rm -f build/s_*.log build/log_netproc_st.txt
 build/netproc "$TOPO" >build/log_netproc_st.txt 2>&1 &
@@ -19,11 +19,11 @@ trap 'kill $NP 2>/dev/null' EXIT
 sleep 0.5
 
 LT=12
-./bfproc 127.0.0.1 56908 $LT 23 76      >build/s_56908.log 2>&1 &
-./bfproc 127.0.0.1 25824 $LT 23 62 213  >build/s_25824.log 2>&1 &
-./bfproc 127.0.0.1 7416  $LT 62 155 136 >build/s_7416.log  2>&1 &
-./bfproc 127.0.0.1 53021 $LT 155 76 79  >build/s_53021.log 2>&1 &
-./bfproc 127.0.0.1 15762 $LT 213 136 79 >build/s_15762.log 2>&1 &
+./nodeproc 127.0.0.1 56908 $LT 23 76      >build/s_56908.log 2>&1 &
+./nodeproc 127.0.0.1 25824 $LT 23 62 213  >build/s_25824.log 2>&1 &
+./nodeproc 127.0.0.1 7416  $LT 62 155 136 >build/s_7416.log  2>&1 &
+./nodeproc 127.0.0.1 53021 $LT 155 76 79  >build/s_53021.log 2>&1 &
+./nodeproc 127.0.0.1 15762 $LT 213 136 79 >build/s_15762.log 2>&1 &
 
 sleep $((LT + 1))
 kill $NP 2>/dev/null

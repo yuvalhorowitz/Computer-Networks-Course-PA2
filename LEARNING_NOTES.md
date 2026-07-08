@@ -31,11 +31,11 @@
 # Step 0 — The assignment & the theory behind it
 
 **Status:** understanding only — no code. This step makes the assignment and its theory clear before
-we write a single line of `bfproc`.
+we write a single line of `nodeproc`.
 
 ## 0.1 What the assignment asks
 
-We write **one program, `bfproc`** (the "node process"). Many copies run at once — one per node in a
+We write **one program, `nodeproc`** (the "node process"). Many copies run at once — one per node in a
 network. The nodes never talk directly; a provided program, **`netproc`**, simulates the network and
 relays every message over TCP.
 
@@ -64,7 +64,7 @@ Protocol (STP)**.
 
 This is the heart of Step 0. The assignment is, in essence, the **control plane of STP** taught in
 **Lecture 4** ("גשרים ופרוטוקול העץ הפורש"). The course builds it in layers; the same layers map
-1-to-1 onto what `bfproc` must do.
+1-to-1 onto what `nodeproc` must do.
 
 ### Why a spanning tree at all?
 Bridges connected with **redundant links** (good for reliability) create **loops**, and a broadcast
@@ -146,7 +146,7 @@ discarded. This one idea underlies three PA2 requirements:
 
 | Lecture-4 / STP concept | PA2 realization |
 |---|---|
-| Bridge running STP | one `bfproc` process per node |
+| Bridge running STP | one `nodeproc` process per node |
 | Bridges talking over LAN segments | node processes exchanging 128-byte frames via `netproc` |
 | BPDU `(myRoot, myDist, myID)` | the message payload (+ `expTime`) |
 | Default `(myID, 0, myID)` | initial state `myRoot=myID, myCost=0, parent=NULL` |
@@ -160,7 +160,7 @@ discarded. This one idea underlies three PA2 requirements:
 
 ### Command line
 ```
-bfproc  <netproc_address>  <node_id>  <lifetime>  <cost1> [cost2 ...]
+nodeproc  <netproc_address>  <node_id>  <lifetime>  <cost1> [cost2 ...]
 ```
 - `netproc_address` — IP where `netproc` runs (`127.0.0.1` if local); port is always **6789**.
 - `node_id` — this node's integer ID. The PDF calls it "the ID you assign to the current process":
@@ -211,7 +211,7 @@ byte `0xFF`) of that BPDU. A node only ever advertises *its own* best BPDU — i
 | `expTime` expires → reset to self-root | `Root=<myID> parent=NULL distance=0` + broadcast → `Message sent…` |
 | Lifetime reached | `Lifetime expired. Shutting down.` |
 
-**PDF example transcript, decoded** (`bfproc … 100 5432 10 7 3 1`):
+**PDF example transcript, decoded** (`nodeproc … 100 5432 10 7 3 1`):
 ```
 time=120.0  Root=100 parent=NULL distance=0   ← initial belief = default BPDU (100,0,100)
 time=120.1  Message sent to all neighbors     ← first broadcast of (100,0,100)        [view change]
@@ -366,13 +366,13 @@ same order `netproc` builds that node's `edgelist`, so position = link index. Th
 
 | node_id | command (local, 60 s) | link0 | link1 | link2 |
 |---|---|---|---|---|
-| 56908 | `bfproc 127.0.0.1 56908 60 23 76`     | 23→25824 | 76→53021 | — |
-| 25824 | `bfproc 127.0.0.1 25824 60 23 62 213` | 23→56908 | 62→7416  | 213→15762 |
-| 7416  | `bfproc 127.0.0.1 7416 60 62 155 136` | 62→25824 | 155→53021 | 136→15762 |
-| 53021 | `bfproc 127.0.0.1 53021 60 155 76 79` | 155→7416 | 76→56908 | 79→15762 |
-| 15762 | `bfproc 127.0.0.1 15762 60 213 136 79`| 213→25824 | 136→7416 | 79→53021 |
+| 56908 | `nodeproc 127.0.0.1 56908 60 23 76`     | 23→25824 | 76→53021 | — |
+| 25824 | `nodeproc 127.0.0.1 25824 60 23 62 213` | 23→56908 | 62→7416  | 213→15762 |
+| 7416  | `nodeproc 127.0.0.1 7416 60 62 155 136` | 62→25824 | 155→53021 | 136→15762 |
+| 53021 | `nodeproc 127.0.0.1 53021 60 155 76 79` | 155→7416 | 76→56908 | 79→15762 |
+| 15762 | `nodeproc 127.0.0.1 15762 60 213 136 79`| 213→25824 | 136→7416 | 79→53021 |
 
-E.g. `bfproc 127.0.0.1 7416 60 62 155 136`: play node 7416, connect to local `netproc:6789`, run 60 s,
+E.g. `nodeproc 127.0.0.1 7416 60 62 155 136`: play node 7416, connect to local `netproc:6789`, run 60 s,
 with link costs 62/155/136. The "→neighbor" column is *not* passed on the command line — it's what the
 node discovers via the link byte + each BPDU's `myID`.
 
@@ -390,10 +390,10 @@ _None — Step 0 is understanding only. Code begins in Step 1 (verify netproc) p
 # Step 1 — Verify netproc empirically
 
 **Status:** ✅ done. We built the provided `netproc` and a throwaway probe and confirmed the wire
-protocol live, so `bfproc` is built on observed facts, not just a source reading.
+protocol live, so `nodeproc` is built on observed facts, not just a source reading.
 
 ## 1.1 Concepts (what we verify and why)
-We *inferred* netproc's behavior from the alpha source (§0.4). Before building `bfproc` on those
+We *inferred* netproc's behavior from the alpha source (§0.4). Before building `nodeproc` on those
 assumptions, confirm them by watching real bytes. Six things to check:
 1. **Connect handshake** — connect + send ID as `htonl(int)` is accepted (wrong ID rejected).
 2. **Frame size** — messages are exactly **128 bytes**.
@@ -439,7 +439,7 @@ held: handshake ✅, 128-byte frames ✅, **byte-0 rewrite to receiver's link** 
 - `build/step1_probe.sh` — orchestrates the two experiments and prints observed vs. predicted.
 - Build/run commands recorded in `COMMANDS.md`.
 
-## 1.5 Takeaways that lock the `bfproc` design
+## 1.5 Takeaways that lock the `nodeproc` design
 - **Send:** frame = `[dest-link (0-based) | 127-byte payload]`; `0xFF` = broadcast. Use `writen`.
 - **Receive:** `readn` exactly 128; `frame[0]` = our ingress link → index `cost[frame[0]]`; decode the
   BPDU from `frame[1..]`. The sender's ID is in the payload (`myID`), *not* byte 0.
@@ -449,7 +449,7 @@ held: handshake ✅, 128-byte frames ✅, **byte-0 rewrite to receiver's link** 
 
 # Step 2 — Scaffold + connection lifecycle
 
-**Status:** ✅ done. First real submission code: a `bfproc` that connects, registers, prints its
+**Status:** ✅ done. First real submission code: a `nodeproc` that connects, registers, prints its
 initial state, and shuts down at `lifetime` — no protocol logic yet.
 
 ## 2.1 Concepts
@@ -468,10 +468,10 @@ initial state, and shuts down at `lifetime` — no protocol logic yet.
 1. **`bf.h`** — provided constants + `FRAME_LEN/PAYLOAD_LEN/LINK_BROADCAST` + the `bf_msg` struct.
 2. **`net_util.{h,c}`** — `readn`/`writen` (from the Step-1 probe), `connect_to_netproc()` (socket +
    `TCP_NODELAY` + connect), `send_id()` (`htonl`), and `clock_start()`/`now_ms()`.
-3. **`bfproc.c`** — parse `argv` (addr, id, lifetime, costs[]), connect, send ID, print initial state,
+3. **`nodeproc.c`** — parse `argv` (addr, id, lifetime, costs[]), connect, send ID, print initial state,
    then a `select()`-to-lifetime loop that drains (ignores) any frame, then the shutdown line + clean
    close.
-4. **`Makefile`** — builds `bfproc` from `bfproc.c` + `net_util.c` with `-Wall -Wextra -std=gnu11`
+4. **`Makefile`** — builds `nodeproc` from `nodeproc.c` + `net_util.c` with `-Wall -Wextra -std=gnu11`
    (`gnu11` exposes POSIX/BSD prototypes on both Linux and macOS without feature-test macros), + `clean`.
 5. **`README`** — skeleton with team placeholders and the required section headings.
 
@@ -486,7 +486,7 @@ initial state, and shuts down at `lifetime` — no protocol logic yet.
   connect + register + initial state + clean lifetime shutdown.
 
 ## 2.4 Code (submission files)
-`bf.h`, `net_util.h`, `net_util.c`, `bfproc.c`, `Makefile`, `README` (repo root). Run-test harness
+`bf.h`, `net_util.h`, `net_util.c`, `nodeproc.c`, `Makefile`, `README` (repo root). Run-test harness
 `build/step2_run.sh` is throwaway. Notable choices: `std=gnu11` for portability; `select()` loop shape
 chosen now so Step 5 only has to add deadlines/handlers, not restructure.
 
@@ -498,7 +498,7 @@ received frames (`frame[0]` → link, `frame[1..]` → `bf_msg`).
 
 # Step 3 — Neighbor/link table + message encode/decode
 
-**Status:** ✅ done. Defined the wire serialization and the per-link table; `bfproc` now parses and
+**Status:** ✅ done. Defined the wire serialization and the per-link table; `nodeproc` now parses and
 stores received frames (no relaxation/sending yet).
 
 ## 3.1 Concepts
@@ -512,7 +512,7 @@ stores received frames (no relaxation/sending yet).
 
 ## 3.2 Implementation steps (what we built)
 1. **`msg.{h,c}`** — `msg_encode`/`msg_decode` + `build_send_frame`/`parse_recv_frame`.
-2. **`bfproc.c`** — added `link_t`/`node_t`; fill `link[i].cost` from argv; init self-root state; the
+2. **`nodeproc.c`** — added `link_t`/`node_t`; fill `link[i].cost` from argv; init self-root state; the
    receive path now `parse_recv_frame` → stores `nbrID/nbrRoot/nbrCost/nbrExp/recvMs`, `heard=1`
    (with an optional `-DBF_DEBUG` stderr decode log). Graded stdout unchanged.
 3. **`Makefile`** — added `msg.o`.
@@ -537,11 +537,11 @@ Frame = **128 bytes**: `[ byte 0 = link ][ bytes 1..127 = payload ]`. Payload (n
 ## 3.4 Results
 - `make` builds clean, no warnings. `build/test_msg` passes: round-trip preserves all four fields, the
   link byte, and zero padding — output matched the table above exactly.
-- `bfproc`'s receive path compiles and stores into the link table; it only *fires* once a neighbor
+- `nodeproc`'s receive path compiles and stores into the link table; it only *fires* once a neighbor
   actually sends (Step 4), where we'll confirm it live with `-DBF_DEBUG`.
 
 ## 3.5 Code (submission files)
-Added `msg.h`, `msg.c`; updated `net_util.c` (socket flags), `bfproc.c` (table + decode), `Makefile`.
+Added `msg.h`, `msg.c`; updated `net_util.c` (socket flags), `nodeproc.c` (table + decode), `Makefile`.
 Throwaway: `build/test_msg.c`.
 
 ## 3.6 Next
@@ -568,7 +568,7 @@ on change). This makes received data actually drive state — and exercises the 
 - **Deferred to Step 5:** real `expTime` aging + root-crash recovery (Step 4 `expTime` is a
   placeholder).
 
-## 4.2 Implementation steps (`bfproc.c`)
+## 4.2 Implementation steps (`nodeproc.c`)
 1. `relax(node)` — the comparison above; returns whether `(myRoot,myCost)` changed.
 2. `print_state(node)` — the exact `Root/parent/distance` line (`parent=NULL` when self-root).
 3. `send_update(node, fd, &helloDeadline)` — build BPDU → `build_send_frame(0xFF)` → `writen` → print
@@ -591,7 +591,7 @@ time=5.0  Lifetime expired. Shutting down.
 (Convergence completes sub-100 ms, so it all prints at `time=0.0`; HELLO sends confirm the 2 s timer.)
 
 ## 4.4 Code (submission files)
-Added `relax`, `print_state`, `send_update` to `bfproc.c`; event loop now manages the HELLO + lifetime
+Added `relax`, `print_state`, `send_update` to `nodeproc.c`; event loop now manages the HELLO + lifetime
 deadlines. Throwaway: `build/step4_run.sh` (5-node convergence check).
 
 ## 4.5 Next
@@ -621,7 +621,7 @@ after `ROOT_TIMEOUT`.
 - Because `ROOT_TIMEOUT = 3×HELLO_TIMEOUT`, a live root keeps deadlines pushed ~6 s out; when it dies
   they lapse ≈ `last_emit + ROOT_TIMEOUT` network-wide and the tree re-forms.
 
-## 5.2 Implementation steps (`bfproc.c`)
+## 5.2 Implementation steps (`nodeproc.c`)
 1. Added `long expDeadline` to `link_t`.
 2. Receive store applies the increase-only / new-root deadline rule.
 3. `relax()` skips links with `now >= expDeadline`.
@@ -645,7 +645,7 @@ time=12..16 HELLO ; time=17.4 Lifetime expired. Shutting down.
 ```
 
 ## 5.4 Code (submission files)
-`bfproc.c`: `link_t.expDeadline`, liveness gate in `relax`, `root_expiry`, real `expTime` in
+`nodeproc.c`: `link_t.expDeadline`, liveness gate in `relax`, `root_expiry`, real `expTime` in
 `send_update`, three-deadline loop with per-iteration re-relax. Throwaway: `build/step5_run.sh`.
 
 ## 5.5 Status
@@ -667,15 +667,15 @@ states", and ensure the zip contains exactly the required files.
 
 ## 6.2 Implementation steps (what we did)
 1. **README finalized** — Algorithm, Data structures, Packet structure, Multiple timeouts, and
-   **Notes/anything unusual** (the `nodeproc`→`bfproc` name discrepancy, elapsed-time choice, ms
+   **Notes/anything unusual** (the `nodeproc`→`nodeproc` name discrepancy, elapsed-time choice, ms
    `expTime`, endianness-independent serialization, SIGPIPE/`MSG_NOSIGNAL`/`MSG_WAITALL`, `gnu11`),
    plus a Testing summary. (Team line still a placeholder.)
 2. **Extreme-test harnesses** (throwaway, `build/`):
    - `build/topo_loop.csv` + `build/step6_loop.sh` — 4-node graph with cycles (ring + chord), root 10,
      including an equal-cost tie at node 30.
    - `build/step6_rejoin.sh` — kill the root, recover to 15762, restart 7416, reclaim root.
-3. **Submission hygiene** — clean `make` builds `bfproc`; repo-root submission set is exactly
-   `README, Makefile, bf.h, net_util.{h,c}, msg.{h,c}, bfproc.c` (no strays); `zip` command in
+3. **Submission hygiene** — clean `make` builds `nodeproc`; repo-root submission set is exactly
+   `README, Makefile, bf.h, net_util.{h,c}, msg.{h,c}, nodeproc.c` (no strays); `zip` command in
    `COMMANDS.md`.
 
 ## 6.3 Results

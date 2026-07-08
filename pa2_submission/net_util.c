@@ -1,7 +1,7 @@
 /*
  * net_util.c — implementation of the socket and timing helpers.
  *
- * Purpose: robust, reusable plumbing used by nodeproc — exact-length stream I/O
+ * Purpose: robust, reusable plumbing used by bfproc — exact-length stream I/O
  * (TCP has no message boundaries), connection setup with the socket options the
  * assignment requires (TCP_NODELAY, and MSG_WAITALL/MSG_NOSIGNAL on the data
  * calls), the ID handshake, and an elapsed-milliseconds clock for event times

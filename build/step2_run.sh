@@ -9,7 +9,7 @@ TOPO="$SRC/topology.csv"
 
 # build (netproc needs the macOS threads shim; bfproc is plain)
 [ -x build/netproc ] || cc -std=c11 -Wall -pthread -Ibuild/shim -I"$SRC" -o build/netproc "$SRC/netproc.c"
-make -s bfproc
+make -s nodeproc
 
 rm -f build/log_netproc2.txt
 build/netproc "$TOPO" >build/log_netproc2.txt 2>&1 &
@@ -17,7 +17,7 @@ NP=$!
 sleep 0.6
 
 echo "===== bfproc output (node 7416, lifetime 3s) ====="
-./bfproc 127.0.0.1 7416 3 62 155 136
+./nodeproc 127.0.0.1 7416 3 62 155 136
 
 echo
 echo "===== netproc connection log ====="

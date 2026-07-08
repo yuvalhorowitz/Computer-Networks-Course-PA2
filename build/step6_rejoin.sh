@@ -9,7 +9,7 @@ SRC="source files/PA2_resource_alpha"
 TOPO="$SRC/topology.csv"
 
 [ -x build/netproc ] || cc -std=c11 -Wall -pthread -Ibuild/shim -I"$SRC" -o build/netproc "$SRC/netproc.c"
-make -s bfproc
+make -s nodeproc
 
 rm -f build/r_7416.log build/r_25824.log build/r_53021.log build/r_15762.log build/r_56908.log build/log_netproc7.txt
 build/netproc "$TOPO" >build/log_netproc7.txt 2>&1 &
@@ -17,18 +17,18 @@ NP=$!
 trap 'kill $NP 2>/dev/null' EXIT
 sleep 0.5
 
-./bfproc 127.0.0.1 56908 25 23 76      >build/r_56908.log 2>&1 &
-./bfproc 127.0.0.1 25824 25 23 62 213  >build/r_25824.log 2>&1 &
-./bfproc 127.0.0.1 53021 25 155 76 79  >build/r_53021.log 2>&1 &
-./bfproc 127.0.0.1 15762 25 213 136 79 >build/r_15762.log 2>&1 &
-./bfproc 127.0.0.1 7416  25 62 155 136 >build/r_7416.log  2>&1 & P7416=$!
+./nodeproc 127.0.0.1 56908 25 23 76      >build/r_56908.log 2>&1 &
+./nodeproc 127.0.0.1 25824 25 23 62 213  >build/r_25824.log 2>&1 &
+./nodeproc 127.0.0.1 53021 25 155 76 79  >build/r_53021.log 2>&1 &
+./nodeproc 127.0.0.1 15762 25 213 136 79 >build/r_15762.log 2>&1 &
+./nodeproc 127.0.0.1 7416  25 62 155 136 >build/r_7416.log  2>&1 & P7416=$!
 
 sleep 5
 echo "=== t~5s: kill 7416 (survivors should re-elect 15762) ==="
 kill -9 "$P7416" 2>/dev/null
 sleep 9
 echo "=== t~14s: restart 7416 (network should reclaim 7416 as root) ==="
-./bfproc 127.0.0.1 7416 11 62 155 136 >>build/r_7416.log 2>&1 &
+./nodeproc 127.0.0.1 7416 11 62 155 136 >>build/r_7416.log 2>&1 &
 sleep 9
 kill $NP 2>/dev/null
 
